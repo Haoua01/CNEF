@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Banks Map</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+
+  <style>
+    html, body { width:100%; height:100%; margin:0; padding:0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e27; }
+    #map { position: absolute; left: 420px; top: 0; right: 0; bottom: 0; }
+    .leaflet-container { font-size: 1rem; }
+
+    .back-button {
+      position: absolute; top: 25px; left: 440px; z-index: 1000;
+      background: rgba(255, 255, 255, 0.95); color: #1a1f3a; padding: 11px 28px; border-radius: 6px;
+      text-decoration: none; font-weight: 500; font-size: 14px; border: 1px solid rgba(26,31,58,0.08);
+      transition: all .2s cubic-bezier(0.4,0,0.2,1); letter-spacing: .01em;
+    }
+    .back-button:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+
+    #sidebar {
+      position: absolute; left: 0; top: 0; width: 420px; height: 100%; background: #fff;
+      border-right: 1px solid #e5e7eb; overflow-y: auto; z-index: 1000;
+    }
+    #sidebar-content { padding: 40px 32px; }
+    .sidebar-title { font-size: 26px; font-weight: 600; margin-bottom: 6px; color: #111827; letter-spacing: -0.02em; line-height: 1.2; }
+    .sidebar-subtitle { font-size: 15px; color: #6b7280; margin-bottom: 18px; font-weight: 400; line-height: 1.5; }
+
+    /* "Titre" remplacé par un select stylé */
+    .city-title-select {
+      width: 100%;
+      font-size: 20px; font-weight: 600; color: #111827;
+      padding: 0 34px 18px 0;
+      border: none; border-bottom: 2px solid #111827;
+      background: transparent;
+      letter-spacing: -0.01em; line-height: 1.2;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      cursor: pointer;
+    }
+    .city-title-wrap { position: relative; margin-bottom: 2px; }
+    .city-title-wrap::after {
+      content: "";
+      position: absolute; right: 6px; top: 4px; width: 22px; height: 22px; pointer-events: none;
+      background-repeat: no-repeat; background-position: center;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="%23111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+    }
+    .city-title-select:focus { outline: none; box-shadow: 0 2px 0 0 #111827; }
+
+    .city-info { margin-top: 18px; animation: slideIn .35s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes slideIn { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 28px 0; }
+    .stat-box { padding: 20px 22px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .stat-box-dark { background: #111827; border-color: #111827; }
+    .stat-box-dark .stat-label { color: #9ca3af; }
+    .stat-box-dark .stat-value { color: #fff; }
+    .stat-label { font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-value { font-size: 36px; font-weight: 600; color: #111827; letter-spacing: -0.03em; line-height: 1; }
+
+    .bank-breakdown { margin-top: 28px; }
+    .bank-breakdown-title { font-size: 13px; font-weight: 600; margin-bottom: 16px; color: #6b7280; text-transform: uppercase; letter-spacing: .08em; }
+
+    .bank-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; margin: 0 0 10px 0; background: #f9fafb; border-radius: 8px;
+      border: 1px solid #f3f4f6; transition: all .2s cubic-bezier(0.4,0,0.2,1);
+    }
+    .bank-item:hover { background: #f3f4f6; border-color: #e5e7eb; }
+    .bank-name { font-weight: 500; color: #111827; font-size: 15px; letter-spacing: -0.01em; }
+
+    .bank-count {
+      cursor: pointer; user-select: none;
+      background: #e5e7eb; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none;
+    }
+
+    .branch-list { margin: 8px 0 14px 0; padding-left: 8px; border-left: 2px solid #e5e7eb; display: none; }
+    .branch-item {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; margin: 6px 0; padding: 10px 12px; border: 1px solid #f3f4f6; border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 14px;
+    }
+    .branch-item:hover { background: #f9fafb; border-color: #e5e7eb; }
+    .branch-name { color: #111827; }
+    .branch-city { font-size: 12px; color: #6b7280; }
+
+    .no-selection {
+      color: #9ca3af; margin-top: 40px; padding: 48px 24px; background: #f9fafb;
+      border-radius: 8px; text-align: center; font-size: 15px; line-height: 1.6; border: 1px solid #f3f4f6;
+    }
+
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    #sidebar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+    /* Reset control styling */
+    .leaflet-control-resetview a {
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      text-decoration: none;
+      display: inline-block;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .leaflet-control-resetview a:hover { background: #f9fafb; }
+  </style>
+</head>
+
+<body>
+  <!--<a href="index.html" class="back-button">Retour</a>-->
+
+  <div id="sidebar">
+    <div id="sidebar-content">
+      <div class="sidebar-title">Agences Bancaires au Tchad</div>
+      <div class="sidebar-subtitle"></div>
+
+      <div id="city-info" class="no-selection">
+        Sélectionnez une ville sur la carte pour voir les statistiques des agences bancaires.
+      </div>
+    </div>
+  </div>
+
+  <div class="folium-map" id="map"></div>
+
+  <script>
+    // --- Defaults ---
+    const DEFAULT_CENTER = [15.5, 18];
+    const DEFAULT_ZOOM = 6;
+
+    // --- Carte ---
+    var map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl: true, preferCanvas: false, crs: L.CRS.EPSG3857 });
+
+    // Panes (bas → haut)
+    map.createPane('countries');            map.getPane('countries').style.zIndex = 300;  map.getPane('countries').style.pointerEvents = 'none';
+    map.createPane('cityCircles');          map.getPane('cityCircles').style.zIndex = 650;
+    map.createPane('branchMarkers');        map.getPane('branchMarkers').style.zIndex = 660;
+    map.createPane('labels');               map.getPane('labels').style.zIndex = 670;      map.getPane('labels').style.pointerEvents = 'none';
+
+    // Tuiles
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
+      attribution: "&copy; OpenStreetMap contributors &copy; CartoDB"
+    }).addTo(map);
+
+    // Fond pays Afrique
+    fetch("./monde.geojson")
+      .then(r => r.json())
+      .then(data => L.geoJSON(data, {
+        pane: 'countries',
+        style: () => ({ color: "black", weight: 1, opacity: 1, fillColor: "white", fillOpacity: 1 })
+      }).addTo(map))
+      .catch(err => console.error("Error loading Africa countries:", err));
+
+    // Définir bankBranches en récupérant les données de agences_latest.json
+    const bankBranches = [{ bank: "Ecobank", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "Ecobank", name: "Agence Rue de 40m", address: "Boulevard François Tombalbaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "Ecobank", name: "Agence Paris Congo", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "Ecobank", name: "Agence Goudji", address: "Goudji, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1516782, lon: 15.0415641 },
+    { bank: "Ecobank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.09, lon: 15.09 },
+    { bank: "Ecobank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+    { bank: "Ecobank", name: "Agence Pala", address: "Pala, Tchad", city: "Pala", lat: 9.3640891, lon: 14.9096846 },
+    { bank: "Ecobank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.1412086, lon: 18.3682641 },
+    { bank: "Ecobank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.6791925, lon: 16.8591387 },
+    { bank: "Ecobank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+    { bank: "Ecobank", name: "Agence Bongor", address: "Bongor, Tchad", city: "Bongor", lat: 10.2748807, lon: 15.3775245 },
+    { bank: "Coris Bank", name: "Agence Siège", address: "Siège, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1137495, lon: 15.0355481 },
+    { bank: "Coris Bank", name: "Agence El-Nimery", address: "Maldom Bada Abbas (El-Nimery), N'Djamena, Tchad", city: "N'Djamena", lat: 12.113368, lon: 15.050512 },
+    { bank: "Coris Bank", name: "Agence Rue de 40M", address: "Rue de 40M, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128119, lon: 15.049249 },
+    { bank: "Coris Bank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0917872, lon: 15.0836485 },
+    { bank: "Coris Bank", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128688, lon: 15.10311 },
+    { bank: "Coris Bank", name: "Agence Kabalaye", address: "Kabalaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.100206, lon: 15.053213 },
+    { bank: "Coris Bank", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128712, lon: 14.986813 },
+    { bank: "Coris Bank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.563974, lon: 16.085619 },
+    { bank: "Coris Bank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8300043, lon: 20.8366703 },
+    { bank: "Coris Bank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.144208, lon: 18.385892 },
+    { bank: "Coris Bank", name: "Agence Mongo", address: "Mongo, Tchad", city: "Mongo", lat: 12.1784737, lon: 18.6878752 },
+    { bank: "Coris Bank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.662564, lon: 16.850704 },
+    { bank: "UBA", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "UBA", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
+    { bank: "UBA", name: "Agence Sabangali", address: "Sabangali, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "UBA", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
+    { bank: "UBA", name: "Agence Ndjari", address: "Ndjari, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1334625, lon: 15.0857969 },
+    { bank: "UBA", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
+    { bank: "BAC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "BCC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "BCC", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BCC", name: "Agence Al Yousr", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BCC", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BCC", name: "Agence Ambassatna", address: "Ambassatna, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1039928, lon: 15.0546455 },
+    { bank: "BCC", name: "Agence Tiné", address: "Tiné, Tchad", city: "Tiné", lat: 15.0166667, lon: 22.7833333 },
+    { bank: "BCC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+    { bank: "BCC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+    { bank: "BCC", name: "Agence Amdjarass", address: "Amdjarass, Tchad", city: "Amdjarass", lat: 16.067168960044416, lon: 22.839841898932907 },
+    { bank: "CBT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.11864396420912, lon: 15.03541167979249 },
+    { bank: "CBT", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128260708641998, lon: 15.074499006775728 },
+    { bank: "CBT", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
+    { bank: "CBT", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
+    { bank: "CBT", name: "Agence Bada Abbas", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.11622524279261, lon: 15.050348267052286 },
+    { bank: "CBT", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+    { bank: "CBT", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+    { bank: "BSIC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "BSIC", name: "Agence Habbena", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BSIC", name: "Agence Maldom Bada", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BSIC", name: "Agence Marché à Mil", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+    { bank: "BSIC", name: "Agence CDG", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "BSIC", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
+    { bank: "BSIC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+    { bank: "BSIC", name: "Agence Bol", address: "Bol, Tchad", city: "Bol", lat: 13.4590358, lon: 14.7113595 },
+    { bank: "BSIC", name: "Agence Mao", address: "Mao, Tchad", city: "Mao", lat: 14.1310247, lon: 15.3189726 },
+    { bank: "BSIC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+    { bank: "BHT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "Attijari", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+    { bank: "Orabank", name: "Agence principale", address: "Avenue Charles De Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
+    { bank: "Orabank", name: "Agence de Djambal Bahr", address: "Avenue du Général Charles de Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.109667, lon: 15.043778 },
+    { bank: "Orabank", name: "Agence Amriguébé", address: "Boulevard Ngarta Tombalbaye, N'Djaména, Tchad", city: "N'Djamena", lat: 12.128, lon: 15.067778 },
+    { bank: "Orabank", name: "Agence V.I.P", address: "Avenue du Général Charles de Gaulle, N'Djaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
+    { bank: "Orabank", name: "Agence d'Abéché", address: "Avenue TATA, Abéché, Tchad", city: "Abéché", lat: 13.829306, lon: 20.830111 },
+    { bank: "Orabank", name: "Agence de Moundou", address: "Rue des Commerces, Moundou, Tchad", city: "Moundou", lat: 8.565972, lon: 16.086 },
+    { bank: "Orabank", name: "Agence de Sarh", address: "Rue des Commerces, Sarh, Tchad", city: "Sarh", lat: 9.148167, lon: 18.385417 },
+    { bank: "Orabank", name: "Agence d'Am Timan", address: "Rue des Commerces, Am Timan, Tchad", city: "Am Timan", lat: 11.041389, lon: 20.281917 },
+    { bank: "Orabank", name: "Agence de Pala", address: "Route Nationale – Face Commissariat Central, Pala, Tchad", city: "Pala", lat: 9.364361, lon: 14.909694 },
+    { bank: "Orabank", name: "Agence Mongo", address: "Marché central de Mongo, Mongo, Tchad", city: "Mongo", lat: 12.17675, lon: 18.688278 },
+    { bank: "Orabank", name: "Agence Grande Mosquée", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.187778, lon: 15.085319 }
+    ];
+
+    // --- Structures & index ---
+    const cityData = {};
+    const cityBankBreakdown = {};
+    const branchesByCityBank = {}; // { city: { bank: [branch, ...] } }
+    const markerIndex = {};        // { "city|bank|name": L.CircleMarker }
+    const cityCircles = [];        // [{ city, circle, clickHandler }]
+
+    bankBranches.forEach(b => {
+      if (!cityData[b.city]) { cityData[b.city] = { name: b.city, lat: b.lat, lon: b.lon, branches: 0 }; }
+      cityData[b.city].branches += 1;
+      cityData[b.city].lat = (cityData[b.city].lat * (cityData[b.city].branches - 1) + b.lat) / cityData[b.city].branches;
+      cityData[b.city].lon = (cityData[b.city].lon * (cityData[b.city].branches - 1) + b.lon) / cityData[b.city].branches;
+
+      if (!cityBankBreakdown[b.city]) cityBankBreakdown[b.city] = {};
+      if (!cityBankBreakdown[b.city][b.bank]) cityBankBreakdown[b.city][b.bank] = 0;
+      cityBankBreakdown[b.city][b.bank] += 1;
+
+      if (!branchesByCityBank[b.city]) branchesByCityBank[b.city] = {};
+      if (!branchesByCityBank[b.city][b.bank]) branchesByCityBank[b.city][b.bank] = [];
+      branchesByCityBank[b.city][b.bank].push(b);
+    });
+
+    const cityArray = Object.values(cityData);
+    const cityNames = cityArray.map(c => c.name).sort((a,b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+    function getRadius(n) { return Math.sqrt(n) * 7; }
+
+    // --- UI: panneau latéral ---
+    let sidebarClickHandler = null;
+
+    function updateSidebar(cityName) {
+      const cityInfo = document.getElementById('city-info');
+      const city = cityArray.find(c => c.name === cityName);
+      const bankBreakdown = cityBankBreakdown[cityName];
+
+      if (!city || !bankBreakdown) {
+        clearSidebar();
+        return;
+      }
+
+      const uniqueBanks = Object.keys(bankBreakdown).length;
+      const sortedBanks = Object.entries(bankBreakdown).sort((a,b) => b[1] - a[1]);
+
+      const optionsHTML = cityNames.map(n => `<option value="${escapeHtml(n)}"${n===cityName?' selected':''}>${escapeHtml(n)}</option>`).join('');
+
+      let bankListHTML = '';
+      sortedBanks.forEach(([bank, count]) => {
+        const hasMultiple = count > 1;
+        const listId = `branches-${cssSafe(cityName)}-${cssSafe(bank)}`;
+
+        bankListHTML += `
+          <div class="bank-item" data-bank="${escapeHtml(bank)}" data-city="${escapeHtml(cityName)}">
+            <div class="bank-name">${escapeHtml(bank)}</div>
+            <button
+              class="bank-count"
+              data-bank="${escapeHtml(bank)}"
+              data-city="${escapeHtml(cityName)}"
+              data-count="${count}"
+              ${hasMultiple ? `aria-controls="${listId}" aria-expanded="false"` : ''}
+              title="${hasMultiple ? 'Voir les agences' : 'Zoomer sur l’agence'}"
+            >
+              ${count} agence${count>1?'s':''}
+            </button>
+          </div>
+          ${hasMultiple ? `<div class="branch-list" id="${listId}" data-bank="${escapeHtml(bank)}" data-city="${escapeHtml(cityName)}"></div>` : ''}
+        `;
+      });
+
+      cityInfo.className = 'city-info';
+      cityInfo.innerHTML = `
+        <div class="city-title-wrap">
+          <select id="city-title-select" class="city-title-select" aria-label="Choisir une ville">
+            ${optionsHTML}
+          </select>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Banque${city.branches > 1 ? 's' : ''}</div>
+            <div class="stat-value">${uniqueBanks}</div>
+          </div>
+          <div class="stat-box stat-box-dark">
+            <div class="stat-label">Agence${city.branches > 1 ? 's' : ''}</div>
+            <div class="stat-value">${city.branches}</div>
+          </div>
+        </div>
+        <div class="bank-breakdown">
+          <div class="bank-breakdown-title">Répartition par banque</div>
+          ${bankListHTML}
+        </div>
+      `;
+
+      // Select titre
+      const titleSelect = document.getElementById('city-title-select');
+      titleSelect.addEventListener('change', () => {
+        const selectedCity = titleSelect.value;
+        if (selectedCity && selectedCity !== cityName) {
+          updateSidebar(selectedCity);
+          focusCity(selectedCity);
+        }
+      });
+
+      // Nettoyage & attache des clics de la section
+      if (sidebarClickHandler) { cityInfo.removeEventListener('click', sidebarClickHandler); }
+      sidebarClickHandler = function onClick(e) {
+        const countBtn = e.target.closest('.bank-count');
+        const branchBtn = e.target.closest('.branch-item');
+
+        // si on clique sur "X agences"
+        if (countBtn) {
+          const bank = countBtn.getAttribute('data-bank');
+          const cty  = countBtn.getAttribute('data-city');
+          const cnt  = parseInt(countBtn.getAttribute('data-count') || '0', 10);
+
+          // 1 agence : zoom direct
+          if (cnt === 1) {
+            const items = (branchesByCityBank[cty] && branchesByCityBank[cty][bank]) || [];
+            const b = items[0];
+            if (b) focusBranch(makeBranchId(b));
+            return;
+          }
+
+          // >1 : ouvrir/fermer la liste
+          const listSel = `.branch-list[data-bank="${cssSel(bank)}"][data-city="${cssSel(cty)}"]`;
+          const listEl = cityInfo.querySelector(listSel);
+          if (listEl) {
+            if (listEl.style.display === 'block') {
+              listEl.style.display = 'none';
+              countBtn.setAttribute('aria-expanded', 'false');
+            } else {
+              if (!listEl.hasChildNodes()) {
+                const items = (branchesByCityBank[cty] && branchesByCityBank[cty][bank]) || [];
+                const html = items.map(b => `
+                  <button class="branch-item" data-branch-id="${escapeHtml(makeBranchId(b))}">
+                    <span class="branch-name">${escapeHtml(b.name)}</span>
+                    <span class="branch-city">${escapeHtml(b.city)}</span>
+                  </button>`).join('');
+                listEl.innerHTML = html || '<div style="padding:8px 0;color:#6b7280;">Aucune agence</div>';
+              }
+              listEl.style.display = 'block';
+              countBtn.setAttribute('aria-expanded', 'true');
+            }
+          }
+        }
+
+        // clic sur une agence : zoom sur la localisation
+        if (branchBtn) {
+          const branchId = branchBtn.getAttribute('data-branch-id');
+          focusBranch(branchId);
+        }
+      };
+      cityInfo.addEventListener('click', sidebarClickHandler);
+    }
+
+    // Helpers
+    function cssSafe(str) { return String(str).replace(/\s+/g,'-').replace(/[^A-Za-z0-9_-]/g,''); }
+    function cssSel(str)  { return String(str).replace(/["\\]/g, '\\$&'); }
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+    }
+    function makeBranchId(b) { return `${b.city}|${b.bank}|${b.name}`; }
+
+    // --- Cercles agrégés (par ville) + labels ---
+    cityArray.forEach(city => {
+      const radius = getRadius(city.branches);
+      const circle = L.circleMarker([city.lat, city.lon], {
+        pane: 'cityCircles', bubblingMouseEvents: true,
+        color: "black", fill: true, fillColor: "black", fillOpacity: 0.6,
+        opacity: 1.0, radius: radius, stroke: true, weight: 2
+      }).addTo(map);
+
+      const clickHandler = () => { updateSidebar(city.name); };
+      circle.on('click', clickHandler);
+      cityCircles.push({ city: city.name, circle, clickHandler });
+
+      circle.bindPopup(L.popup({ maxWidth: "200px" }).setContent(`
+        <div>
+          <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name)}</div>
+          <div style="margin: 5px 0; display: inline-block; font-size: 14px;">${city.branches} agence${city.branches > 1 ? 's' : ''}</div>
+        </div>`));
+
+      L.marker([city.lat, city.lon], {
+        pane: 'labels',
+        icon: L.divIcon({
+          className: 'city-label',
+          html: `<div style="font-size:12px;font-weight:600;color:#333;
+                 text-shadow:1px 1px 2px #fff,-1px -1px 2px #fff,1px -1px 2px #fff,-1px 1px 2px #fff;
+                 white-space:nowrap;text-align:center;">${escapeHtml(city.name)}</div>`,
+          iconSize: [100, 20],
+          iconAnchor: [50, radius + 15]
+        })
+      }).addTo(map);
+    });
+
+    // --- Marqueurs d'agences (zoom >= 10) ---
+    bankBranches.forEach(branch => {
+      const marker = L.circleMarker([branch.lat, branch.lon], {
+        pane: 'branchMarkers', bubblingMouseEvents: true,
+        color: "#c00", fill: true, fillColor: "#ff4444", fillOpacity: 0.8,
+        opacity: 1.0, radius: 4, stroke: true, weight: 2
+      });
+      marker.bindPopup(L.popup({ maxWidth: "100%" }).setContent(`
+        <div><strong>${escapeHtml(branch.bank)} ${escapeHtml(branch.name)}</strong><br>${escapeHtml(branch.city)}, Tchad</div>`));
+
+      markerIndex[makeBranchId(branch)] = marker;
+
+      function syncVisibility() {
+        const zoom = map.getZoom();
+        if (zoom >= 10) { if (!map.hasLayer(marker)) marker.addTo(map); }
+        else { if (map.hasLayer(marker)) map.removeLayer(marker); }
+      }
+      map.on('zoomend', syncVisibility);
+      syncVisibility();
+    });
+
+    // --- Masquer/afficher les cercles de ville selon le zoom ---
+    function syncCityCircles() {
+      const showCircles = map.getZoom() < 10; // red dots start at >=10
+      cityCircles.forEach(({ circle, clickHandler }) => {
+        const onMap = map.hasLayer(circle);
+        if (showCircles && !onMap) {
+          circle.addTo(map);
+          circle.on('click', clickHandler);
+        }
+        if (!showCircles && onMap) {
+          circle.off('click', clickHandler);
+          map.removeLayer(circle);
+        }
+      });
+    }
+    map.on('zoomend', syncCityCircles);
+    syncCityCircles();
+
+    // --- focus sur une agence ---
+    function focusBranch(branchId) {
+      const marker = markerIndex[branchId];
+      if (!marker) return;
+      const latlng = marker.getLatLng();
+      const targetZoom = Math.max(12, map.getZoom());
+      map.setView(latlng, targetZoom, { animate: true });
+      if (!map.hasLayer(marker)) marker.addTo(map);
+      setTimeout(() => { marker.openPopup(); }, 250);
+    }
+
+    // --- focus sur une ville ---
+    function focusCity(cityName) {
+      const c = cityArray.find(x => x.name === cityName);
+      if (!c) return;
+      map.flyTo([c.lat, c.lon], Math.max(8, map.getZoom()), { animate: true, duration: 0.6 });
+    }
+
+    // --- RESET VIEW CONTROL ---
+    const ResetView = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function () {
+        const container = L.DomUtil.create('div', 'leaflet-control leaflet-control-resetview');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Réinitialiser la vue';
+        link.innerText = '↺ Reset';
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+                  .on(link, 'click', () => resetView());
+        return container;
+      }
+    });
+    map.addControl(new ResetView());
+
+    // --- Clear sidebar back to "no selection" ---
+    function clearSidebar() {
+      const cityInfo = document.getElementById('city-info');
+      if (!cityInfo) return;
+      if (sidebarClickHandler) cityInfo.removeEventListener('click', sidebarClickHandler);
+      cityInfo.className = 'no-selection';
+      cityInfo.innerHTML = 'Sélectionnez une ville sur la carte pour voir les statistiques des agences bancaires.';
+    }
+
+    function resetView() {
+      map.closePopup();
+      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true });
+      clearSidebar();          // ⟵ also clears dropdown/stat boxes
+      setTimeout(syncCityCircles, 250);
+    }
+
+    // Raccourci clavier "R"
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        resetView();
+      }
+    });
+  </script>
+</body>
+</html>
