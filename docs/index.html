@@ -405,7 +405,7 @@
 
       circle.bindPopup(L.popup({ maxWidth: "200px" }).setContent(`
         <div>
-          <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name.toUpperCase())}</div>
+          <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name)}</div>
           <div style="margin: 5px 0; display: inline-block; font-size: 14px;">${city.branches} agence${city.branches > 1 ? 's' : ''}</div>
         </div>`));
 
@@ -430,7 +430,7 @@
         opacity: 1.0, radius: 4, stroke: true, weight: 2
       });
       marker.bindPopup(L.popup({ maxWidth: "100%" }).setContent(`
-        <div><strong>${escapeHtml(branch.bank)} ${escapeHtml(branch.name)}</strong><br>${escapeHtml(branch.city)}, Tchad</div>`));
+        <div><strong>${escapeHtml(branch.bank.toUpperCase())} ${escapeHtml(branch.name)}</strong><br>${escapeHtml(branch.city)}, Tchad</div>`));
 
       markerIndex[makeBranchId(branch)] = marker;
 
