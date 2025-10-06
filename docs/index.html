@@ -405,7 +405,7 @@
 
       circle.bindPopup(L.popup({ maxWidth: "200px" }).setContent(`
         <div>
-          <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name)}</div>
+          <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name.toUpperCase())}</div>
           <div style="margin: 5px 0; display: inline-block; font-size: 14px;">${city.branches} agence${city.branches > 1 ? 's' : ''}</div>
         </div>`));
 
