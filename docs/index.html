@@ -30,7 +30,6 @@
     .sidebar-title { font-size: 26px; font-weight: 600; margin-bottom: 6px; color: #111827; letter-spacing: -0.02em; line-height: 1.2; }
     .sidebar-subtitle { font-size: 15px; color: #6b7280; margin-bottom: 18px; font-weight: 400; line-height: 1.5; }
 
-    /* "Titre" remplacé par un select stylé */
     .city-title-select {
       width: 100%;
       font-size: 20px; font-weight: 600; color: #111827;
@@ -97,7 +96,6 @@
     #sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
     #sidebar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-    /* Reset control styling */
     .leaflet-control-resetview a {
       background: #ffffff;
       border: 1px solid rgba(0,0,0,0.1);
@@ -112,17 +110,27 @@
     }
     .leaflet-control-resetview a:hover { background: #f9fafb; }
 
+    /* nombres au centre des cercles */
+    .city-count { pointer-events: none; }
+    .city-count .dot {
+      position: relative;
+      left: -3px; 
+      transform: translate(-50%, -50%); /* centre exact */
+      font-size: 11px; /* ajuste si besoin */
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 0 3px rgba(0,0,0,.8), 0 0 6px rgba(0,0,0,.6);
+      white-space: nowrap;
+    }
+
     @media (max-width: 768px) {
       #map { left: 0; top: 30%; bottom: 0; }
       #sidebar { width: 100%; height: 30%; bottom: auto; }
     }
-    
   </style>
 </head>
 
 <body>
-  <!--<a href="index.html" class="back-button">Retour</a>-->
-
   <div id="sidebar">
     <div id="sidebar-content">
       <div class="sidebar-title">Agences Bancaires au Tchad</div>
@@ -145,10 +153,10 @@
     var map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl: true, preferCanvas: false, crs: L.CRS.EPSG3857 });
 
     // Panes (bas → haut)
-    map.createPane('countries');            map.getPane('countries').style.zIndex = 300;  map.getPane('countries').style.pointerEvents = 'none';
-    map.createPane('cityCircles');          map.getPane('cityCircles').style.zIndex = 650;
-    map.createPane('branchMarkers');        map.getPane('branchMarkers').style.zIndex = 660;
-    map.createPane('labels');               map.getPane('labels').style.zIndex = 670;      map.getPane('labels').style.pointerEvents = 'none';
+    map.createPane('countries');     map.getPane('countries').style.zIndex = 300;  map.getPane('countries').style.pointerEvents = 'none';
+    map.createPane('cityCircles');   map.getPane('cityCircles').style.zIndex = 650;
+    map.createPane('branchMarkers'); map.getPane('branchMarkers').style.zIndex = 660;
+    map.createPane('labels');        map.getPane('labels').style.zIndex = 670;    map.getPane('labels').style.pointerEvents = 'none';
 
     // Tuiles
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
@@ -156,7 +164,7 @@
     }).addTo(map);
 
     // Fond pays Afrique
-    fetch("./monde.geojson")
+    fetch("./afrique.geojson")
       .then(r => r.json())
       .then(data => L.geoJSON(data, {
         pane: 'countries',
@@ -164,84 +172,98 @@
       }).addTo(map))
       .catch(err => console.error("Error loading Africa countries:", err));
 
-    // Définir bankBranches en récupérant les données de agences_latest.json
-    const bankBranches = [{ bank: "Ecobank", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "Ecobank", name: "Agence Rue de 40m", address: "Boulevard François Tombalbaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "Ecobank", name: "Agence Paris Congo", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "Ecobank", name: "Agence Goudji", address: "Goudji, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1516782, lon: 15.0415641 },
-    { bank: "Ecobank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.09, lon: 15.09 },
-    { bank: "Ecobank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
-    { bank: "Ecobank", name: "Agence Pala", address: "Pala, Tchad", city: "Pala", lat: 9.3640891, lon: 14.9096846 },
-    { bank: "Ecobank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.1412086, lon: 18.3682641 },
-    { bank: "Ecobank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.6791925, lon: 16.8591387 },
-    { bank: "Ecobank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
-    { bank: "Ecobank", name: "Agence Bongor", address: "Bongor, Tchad", city: "Bongor", lat: 10.2748807, lon: 15.3775245 },
-    { bank: "Coris Bank", name: "Agence Siège", address: "Siège, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1137495, lon: 15.0355481 },
-    { bank: "Coris Bank", name: "Agence El-Nimery", address: "Maldom Bada Abbas (El-Nimery), N'Djamena, Tchad", city: "N'Djamena", lat: 12.113368, lon: 15.050512 },
-    { bank: "Coris Bank", name: "Agence Rue de 40M", address: "Rue de 40M, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128119, lon: 15.049249 },
-    { bank: "Coris Bank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0917872, lon: 15.0836485 },
-    { bank: "Coris Bank", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128688, lon: 15.10311 },
-    { bank: "Coris Bank", name: "Agence Kabalaye", address: "Kabalaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.100206, lon: 15.053213 },
-    { bank: "Coris Bank", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128712, lon: 14.986813 },
-    { bank: "Coris Bank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.563974, lon: 16.085619 },
-    { bank: "Coris Bank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8300043, lon: 20.8366703 },
-    { bank: "Coris Bank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.144208, lon: 18.385892 },
-    { bank: "Coris Bank", name: "Agence Mongo", address: "Mongo, Tchad", city: "Mongo", lat: 12.1784737, lon: 18.6878752 },
-    { bank: "Coris Bank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.662564, lon: 16.850704 },
-    { bank: "UBA", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "UBA", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
-    { bank: "UBA", name: "Agence Sabangali", address: "Sabangali, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "UBA", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
-    { bank: "UBA", name: "Agence Ndjari", address: "Ndjari, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1334625, lon: 15.0857969 },
-    { bank: "UBA", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
-    { bank: "BAC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "BCC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "BCC", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BCC", name: "Agence Al Yousr", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BCC", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BCC", name: "Agence Ambassatna", address: "Ambassatna, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1039928, lon: 15.0546455 },
-    { bank: "BCC", name: "Agence Tiné", address: "Tiné, Tchad", city: "Tiné", lat: 15.0166667, lon: 22.7833333 },
-    { bank: "BCC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
-    { bank: "BCC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
-    { bank: "BCC", name: "Agence Amdjarass", address: "Amdjarass, Tchad", city: "Amdjarass", lat: 16.067168960044416, lon: 22.839841898932907 },
-    { bank: "CBT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.11864396420912, lon: 15.03541167979249 },
-    { bank: "CBT", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128260708641998, lon: 15.074499006775728 },
-    { bank: "CBT", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
-    { bank: "CBT", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
-    { bank: "CBT", name: "Agence Bada Abbas", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.11622524279261, lon: 15.050348267052286 },
-    { bank: "CBT", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
-    { bank: "CBT", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
-    { bank: "BSIC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "BSIC", name: "Agence Habbena", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BSIC", name: "Agence Maldom Bada", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BSIC", name: "Agence Marché à Mil", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
-    { bank: "BSIC", name: "Agence CDG", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "BSIC", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
-    { bank: "BSIC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
-    { bank: "BSIC", name: "Agence Bol", address: "Bol, Tchad", city: "Bol", lat: 13.4590358, lon: 14.7113595 },
-    { bank: "BSIC", name: "Agence Mao", address: "Mao, Tchad", city: "Mao", lat: 14.1310247, lon: 15.3189726 },
-    { bank: "BSIC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
-    { bank: "BHT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "Attijari", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
-    { bank: "Orabank", name: "Agence principale", address: "Avenue Charles De Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
-    { bank: "Orabank", name: "Agence de Djambal Bahr", address: "Avenue du Général Charles de Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.109667, lon: 15.043778 },
-    { bank: "Orabank", name: "Agence Amriguébé", address: "Boulevard Ngarta Tombalbaye, N'Djaména, Tchad", city: "N'Djamena", lat: 12.128, lon: 15.067778 },
-    { bank: "Orabank", name: "Agence V.I.P", address: "Avenue du Général Charles de Gaulle, N'Djaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
-    { bank: "Orabank", name: "Agence d'Abéché", address: "Avenue TATA, Abéché, Tchad", city: "Abéché", lat: 13.829306, lon: 20.830111 },
-    { bank: "Orabank", name: "Agence de Moundou", address: "Rue des Commerces, Moundou, Tchad", city: "Moundou", lat: 8.565972, lon: 16.086 },
-    { bank: "Orabank", name: "Agence de Sarh", address: "Rue des Commerces, Sarh, Tchad", city: "Sarh", lat: 9.148167, lon: 18.385417 },
-    { bank: "Orabank", name: "Agence d'Am Timan", address: "Rue des Commerces, Am Timan, Tchad", city: "Am Timan", lat: 11.041389, lon: 20.281917 },
-    { bank: "Orabank", name: "Agence de Pala", address: "Route Nationale – Face Commissariat Central, Pala, Tchad", city: "Pala", lat: 9.364361, lon: 14.909694 },
-    { bank: "Orabank", name: "Agence Mongo", address: "Marché central de Mongo, Mongo, Tchad", city: "Mongo", lat: 12.17675, lon: 18.688278 },
-    { bank: "Orabank", name: "Agence Grande Mosquée", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.187778, lon: 15.085319 }
+
+          const chadBordersFile = "./borders.geojson";
+    fetch(chadBordersFile)
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function () {
+            return { color: "#000", weight: 1, fillOpacity: 0, zIndex: 100 };
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading CEMAC borders:', error));
+
+    // Données d'exemple (à remplacer par ton chargement JSON si besoin)
+    const bankBranches = [
+      { bank: "Ecobank", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "Ecobank", name: "Agence Rue de 40m", address: "Boulevard François Tombalbaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "Ecobank", name: "Agence Paris Congo", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "Ecobank", name: "Agence Goudji", address: "Goudji, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1516782, lon: 15.0415641 },
+      { bank: "Ecobank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.09, lon: 15.09 },
+      { bank: "Ecobank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+      { bank: "Ecobank", name: "Agence Pala", address: "Pala, Tchad", city: "Pala", lat: 9.3640891, lon: 14.9096846 },
+      { bank: "Ecobank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.1412086, lon: 18.3682641 },
+      { bank: "Ecobank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.6791925, lon: 16.8591387 },
+      { bank: "Ecobank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+      { bank: "Ecobank", name: "Agence Bongor", address: "Bongor, Tchad", city: "Bongor", lat: 10.2748807, lon: 15.3775245 },
+      { bank: "Coris Bank", name: "Agence Siège", address: "Siège, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1137495, lon: 15.0355481 },
+      { bank: "Coris Bank", name: "Agence El-Nimery", address: "Maldom Bada Abbas (El-Nimery), N'Djamena, Tchad", city: "N'Djamena", lat: 12.113368, lon: 15.050512 },
+      { bank: "Coris Bank", name: "Agence Rue de 40M", address: "Rue de 40M, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128119, lon: 15.049249 },
+      { bank: "Coris Bank", name: "Agence Chagoua", address: "Chagoua, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0917872, lon: 15.0836485 },
+      { bank: "Coris Bank", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128688, lon: 15.10311 },
+      { bank: "Coris Bank", name: "Agence Kabalaye", address: "Kabalaye, N'Djamena, Tchad", city: "N'Djamena", lat: 12.100206, lon: 15.053213 },
+      { bank: "Coris Bank", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128712, lon: 14.986813 },
+      { bank: "Coris Bank", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.563974, lon: 16.085619 },
+      { bank: "Coris Bank", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8300043, lon: 20.8366703 },
+      { bank: "Coris Bank", name: "Agence Sarh", address: "Sarh, Tchad", city: "Sarh", lat: 9.144208, lon: 18.385892 },
+      { bank: "Coris Bank", name: "Agence Mongo", address: "Mongo, Tchad", city: "Mongo", lat: 12.1784737, lon: 18.6878752 },
+      { bank: "Coris Bank", name: "Agence Doba", address: "Doba, Tchad", city: "Doba", lat: 8.662564, lon: 16.850704 },
+      { bank: "UBA", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "UBA", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
+      { bank: "UBA", name: "Agence Sabangali", address: "Sabangali, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "UBA", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
+      { bank: "UBA", name: "Agence Ndjari", address: "Ndjari, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1334625, lon: 15.0857969 },
+      { bank: "UBA", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
+      { bank: "BAC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "BCC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "BCC", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BCC", name: "Agence Al Yousr", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BCC", name: "Agence Hamama", address: "Hamama, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BCC", name: "Agence Ambassatna", address: "Ambassatna, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1039928, lon: 15.0546455 },
+      { bank: "BCC", name: "Agence Tiné", address: "Tiné, Tchad", city: "Tiné", lat: 15.0166667, lon: 22.7833333 },
+      { bank: "BCC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+      { bank: "BCC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+      { bank: "BCC", name: "Agence Amdjarass", address: "Amdjarass, Tchad", city: "Amdjarass", lat: 16.067168960044416, lon: 22.839841898932907 },
+      { bank: "CBT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.11864396420912, lon: 15.03541167979249 },
+      { bank: "CBT", name: "Agence Rue de 40", address: "Rue de 40m, N'Djamena, Tchad", city: "N'Djamena", lat: 12.128260708641998, lon: 15.074499006775728 },
+      { bank: "CBT", name: "Agence Gassi", address: "Gassi, N'Djamena, Tchad", city: "N'Djamena", lat: 12.0920538, lon: 15.1355806 },
+      { bank: "CBT", name: "Agence Farcha", address: "Farcha, N'Djamena, Tchad", city: "N'Djamena", lat: 12.116667, lon: 14.983333 },
+      { bank: "CBT", name: "Agence Bada Abbas", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.11622524279261, lon: 15.050348267052286 },
+      { bank: "CBT", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+      { bank: "CBT", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+      { bank: "BSIC", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "BSIC", name: "Agence Habbena", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BSIC", name: "Agence Maldom Bada", address: "Avenue Nimery, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BSIC", name: "Agence Marché à Mil", address: "N'Djamena, Tchad", city: "N'Djamena", lat: 12.1191352, lon: 15.0502875 },
+      { bank: "BSIC", name: "Agence CDG", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "BSIC", name: "Agence Dembé", address: "Dembé, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1033387, lon: 15.0822283 },
+      { bank: "BSIC", name: "Agence Abéché", address: "Abéché, Tchad", city: "Abéché", lat: 13.8359417, lon: 20.8433466 },
+      { bank: "BSIC", name: "Agence Bol", address: "Bol, Tchad", city: "Bol", lat: 13.4590358, lon: 14.7113595 },
+      { bank: "BSIC", name: "Agence Mao", address: "Mao, Tchad", city: "Mao", lat: 14.1310247, lon: 15.3189726 },
+      { bank: "BSIC", name: "Agence Moundou", address: "Moundou, Tchad", city: "Moundou", lat: 8.5914775, lon: 16.0757749 },
+      { bank: "BHT", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "Attijari", name: "Agence principale", address: "Avenue Charles de Gaulle, N'Djamena, Tchad", city: "N'Djamena", lat: 12.1089894, lon: 15.0574257 },
+      { bank: "Orabank", name: "Agence principale", address: "Avenue Charles De Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
+      { bank: "Orabank", name: "Agence de Djambal Bahr", address: "Avenue du Général Charles de Gaulle, Ndjaména, Tchad", city: "N'Djamena", lat: 12.109667, lon: 15.043778 },
+      { bank: "Orabank", name: "Agence Amriguébé", address: "Boulevard Ngarta Tombalbaye, N'Djaména, Tchad", city: "N'Djamena", lat: 12.128, lon: 15.067778 },
+      { bank: "Orabank", name: "Agence V.I.P", address: "Avenue du Général Charles de Gaulle, N'Djaména, Tchad", city: "N'Djamena", lat: 12.116139, lon: 15.036083 },
+      { bank: "Orabank", name: "Agence d'Abéché", address: "Avenue TATA, Abéché, Tchad", city: "Abéché", lat: 13.829306, lon: 20.830111 },
+      { bank: "Orabank", name: "Agence de Moundou", address: "Rue des Commerces, Moundou, Tchad", city: "Moundou", lat: 8.565972, lon: 16.086 },
+      { bank: "Orabank", name: "Agence de Sarh", address: "Rue des Commerces, Sarh, Tchad", city: "Sarh", lat: 9.148167, lon: 18.385417 },
+      { bank: "Orabank", name: "Agence d'Am Timan", address: "Rue des Commerces, Am Timan, Tchad", city: "Am Timan", lat: 11.041389, lon: 20.281917 },
+      { bank: "Orabank", name: "Agence de Pala", address: "Route Nationale – Face Commissariat Central, Pala, Tchad", city: "Pala", lat: 9.364361, lon: 14.909694 },
+      { bank: "Orabank", name: "Agence Mongo", address: "Marché central de Mongo, Mongo, Tchad", city: "Mongo", lat: 12.17675, lon: 18.688278 },
+      { bank: "Orabank", name: "Agence Grande Mosquée", address: "Avenue Maldom Bada Abbas, Ndjaména, Tchad", city: "N'Djamena", lat: 12.187778, lon: 15.085319 }
     ];
 
-    // --- Structures & index ---
+    // Structures & index
     const cityData = {};
     const cityBankBreakdown = {};
-    const branchesByCityBank = {}; // { city: { bank: [branch, ...] } }
-    const markerIndex = {};        // { "city|bank|name": L.CircleMarker }
-    const cityCircles = [];        // [{ city, circle, clickHandler }]
+    const branchesByCityBank = {};
+    const markerIndex = {};
+    const cityCircles = []; // [{ city, circle, countMarker, clickHandler }]
 
     bankBranches.forEach(b => {
       if (!cityData[b.city]) { cityData[b.city] = { name: b.city, lat: b.lat, lon: b.lon, branches: 0 }; }
@@ -262,7 +284,7 @@
     const cityNames = cityArray.map(c => c.name).sort((a,b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
     function getRadius(n) { return Math.sqrt(n) * 7; }
 
-    // --- UI: panneau latéral ---
+    // UI: panneau latéral
     let sidebarClickHandler = null;
 
     function updateSidebar(cityName) {
@@ -326,7 +348,6 @@
         </div>
       `;
 
-      // Select titre
       const titleSelect = document.getElementById('city-title-select');
       titleSelect.addEventListener('change', () => {
         const selectedCity = titleSelect.value;
@@ -336,19 +357,16 @@
         }
       });
 
-      // Nettoyage & attache des clics de la section
       if (sidebarClickHandler) { cityInfo.removeEventListener('click', sidebarClickHandler); }
       sidebarClickHandler = function onClick(e) {
         const countBtn = e.target.closest('.bank-count');
         const branchBtn = e.target.closest('.branch-item');
 
-        // si on clique sur "X agences"
         if (countBtn) {
           const bank = countBtn.getAttribute('data-bank');
           const cty  = countBtn.getAttribute('data-city');
           const cnt  = parseInt(countBtn.getAttribute('data-count') || '0', 10);
 
-          // 1 agence : zoom direct
           if (cnt === 1) {
             const items = (branchesByCityBank[cty] && branchesByCityBank[cty][bank]) || [];
             const b = items[0];
@@ -356,7 +374,6 @@
             return;
           }
 
-          // >1 : ouvrir/fermer la liste
           const listSel = `.branch-list[data-bank="${cssSel(bank)}"][data-city="${cssSel(cty)}"]`;
           const listEl = cityInfo.querySelector(listSel);
           if (listEl) {
@@ -379,7 +396,6 @@
           }
         }
 
-        // clic sur une agence : zoom sur la localisation
         if (branchBtn) {
           const branchId = branchBtn.getAttribute('data-branch-id');
           focusBranch(branchId);
@@ -391,14 +407,13 @@
     // Helpers
     function cssSafe(str) { return String(str).replace(/\s+/g,'-').replace(/[^A-Za-z0-9_-]/g,''); }
     function cssSel(str)  { return String(str).replace(/["\\]/g, '\\$&'); }
-    function escapeHtml(str) {
-      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-    }
+    function escapeHtml(str) { return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
     function makeBranchId(b) { return `${b.city}|${b.bank}|${b.name}`; }
 
-    // --- Cercles agrégés (par ville) + labels ---
+    // Cercles agrégés (par ville) + labels + nombres
     cityArray.forEach(city => {
       const radius = getRadius(city.branches);
+
       const circle = L.circleMarker([city.lat, city.lon], {
         pane: 'cityCircles', bubblingMouseEvents: true,
         color: "black", fill: true, fillColor: "black", fillOpacity: 0.6,
@@ -407,28 +422,40 @@
 
       const clickHandler = () => { updateSidebar(city.name); };
       circle.on('click', clickHandler);
-      cityCircles.push({ city: city.name, circle, clickHandler });
 
-      circle.bindPopup(L.popup({ maxWidth: "200px" }).setContent(`
+      circle.bindPopup(L.popup({ maxWidth: 300, minWidth: 150, autoPan: true }).setContent(`
         <div>
           <div style="font-size: 14px; font-weight: 600;">${escapeHtml(city.name)}</div>
-          <div style="margin: 5px 0; display: inline-block; font-size: 14px;">${city.branches} agence${city.branches > 1 ? 's' : ''}</div>
+          <div style="margin: 5px 0; font-size: 14px;">${city.branches} agence${city.branches > 1 ? 's' : ''}</div>
         </div>`));
 
+      // nom de la ville
       L.marker([city.lat, city.lon], {
         pane: 'labels',
         icon: L.divIcon({
           className: 'city-label',
-          html: `<div style="font-size:12px;font-weight:600;color:#333;
+          html: `<div style="font-size:10px;font-weight:500;color:#333;
                  text-shadow:1px 1px 2px #fff,-1px -1px 2px #fff,1px -1px 2px #fff,-1px 1px 2px #fff;
                  white-space:nowrap;text-align:center;">${escapeHtml(city.name)}</div>`,
           iconSize: [100, 20],
           iconAnchor: [50, radius + 15]
         })
       }).addTo(map);
+
+      // nombre d’agences au centre du cercle
+      const countMarker = L.marker([city.lat, city.lon], {
+        pane: 'labels', interactive: false,
+        icon: L.divIcon({
+          className: 'city-count',
+          html: `<div class="dot">${city.branches}</div>`,
+          iconSize: [0, 0] // centré via transform CSS
+        })
+      }).addTo(map);
+
+      cityCircles.push({ city: city.name, circle, countMarker, clickHandler });
     });
 
-    // --- Marqueurs d'agences (zoom >= 10) ---
+    // Marqueurs d'agences (zoom >= 10)
     bankBranches.forEach(branch => {
       const marker = L.circleMarker([branch.lat, branch.lon], {
         pane: 'branchMarkers', bubblingMouseEvents: true,
@@ -436,7 +463,7 @@
         opacity: 1.0, radius: 4, stroke: true, weight: 2
       });
       marker.bindPopup(L.popup({ maxWidth: "100%" }).setContent(`
-        <div><strong>${escapeHtml(branch.bank.toUpperCase())} ${escapeHtml(branch.name)}</strong><br>${escapeHtml(branch.city)}, Tchad</div>`));
+        <div><strong>${escapeHtml(branch.bank)} ${escapeHtml(branch.name)}</strong><br>${escapeHtml(branch.city)}, Tchad</div>`));
 
       markerIndex[makeBranchId(branch)] = marker;
 
@@ -449,25 +476,26 @@
       syncVisibility();
     });
 
-    // --- Masquer/afficher les cercles de ville selon le zoom ---
+    // Masquer/afficher les cercles de ville et les nombres selon le zoom
     function syncCityCircles() {
-      const showCircles = map.getZoom() < 10; // red dots start at >=10
-      cityCircles.forEach(({ circle, clickHandler }) => {
-        const onMap = map.hasLayer(circle);
-        if (showCircles && !onMap) {
-          circle.addTo(map);
-          circle.on('click', clickHandler);
-        }
-        if (!showCircles && onMap) {
-          circle.off('click', clickHandler);
-          map.removeLayer(circle);
+      const showCircles = map.getZoom() < 10; // points rouges à >=10
+      cityCircles.forEach(({ circle, countMarker, clickHandler }) => {
+        const onMapCircle = map.hasLayer(circle);
+        const onMapCount  = map.hasLayer(countMarker);
+
+        if (showCircles) {
+          if (!onMapCircle) { circle.addTo(map); circle.on('click', clickHandler); }
+          if (!onMapCount)  { countMarker.addTo(map); }
+        } else {
+          if (onMapCircle)  { circle.off('click', clickHandler); map.removeLayer(circle); }
+          if (onMapCount)   { map.removeLayer(countMarker); }
         }
       });
     }
     map.on('zoomend', syncCityCircles);
     syncCityCircles();
 
-    // --- focus sur une agence ---
+    // focus sur une agence
     function focusBranch(branchId) {
       const marker = markerIndex[branchId];
       if (!marker) return;
@@ -478,14 +506,14 @@
       setTimeout(() => { marker.openPopup(); }, 250);
     }
 
-    // --- focus sur une ville ---
+    // focus sur une ville
     function focusCity(cityName) {
       const c = cityArray.find(x => x.name === cityName);
       if (!c) return;
       map.flyTo([c.lat, c.lon], Math.max(8, map.getZoom()), { animate: true, duration: 0.6 });
     }
 
-    // --- RESET VIEW CONTROL ---
+    // RESET VIEW CONTROL
     const ResetView = L.Control.extend({
       options: { position: 'topright' },
       onAdd: function () {
@@ -501,7 +529,7 @@
     });
     map.addControl(new ResetView());
 
-    // --- Clear sidebar back to "no selection" ---
+    // Clear sidebar back to "no selection"
     function clearSidebar() {
       const cityInfo = document.getElementById('city-info');
       if (!cityInfo) return;
@@ -509,6 +537,8 @@
       cityInfo.className = 'no-selection';
       cityInfo.innerHTML = 'Sélectionnez une ville sur la carte pour voir les statistiques des agences bancaires.';
     }
+
+
 
     function resetView() {
       map.closePopup();
